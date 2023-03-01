@@ -1,5 +1,5 @@
 import asyncio
-from threading import Lock, Thread, BoundedSemaphore
+from threading import Lock, Thread, Condition
 
 from MasterService.Logging import *
 from MasterService.AddressHelper import AddressHelper
@@ -62,27 +62,28 @@ class MasterDomain(metaclass=MasterDomainMeta):
 
     # Should send message, do self.number_of_retries retries on fail, 
     # Returns true if message sent, false if all retries failed
-    async def send_message(self, channel, id_and_message, sem):
+    async def send_message(self, channel, id_and_message, notify_cond):
         await asyncio.sleep(channel)
         domain_log("Message Sent!")
-        sem.release()
+        with notify_cond:
+            notify_cond.notify()
         return True
 
     def send_message_to_secondaries(self, id_and_message):
         background_tasks = set()
         required_responces = len(self.addr_helper.GetChannels())    
         required_approves = required_responces    
-        sem = BoundedSemaphore(required_responces)
+        condition = Condition()
 
         for ch in self.addr_helper.GetChannels():
-            sem.acquire()
-            task = self.sheduler.create_task(self.send_message, ch, id_and_message, sem)
+            task = self.sheduler.create_task(self.send_message, ch, id_and_message, condition)
             background_tasks.add(task)
 
         resp_cnt = 0
         while resp_cnt < len(background_tasks):
             # Looks like it will check nonstop after first message, but I am lazy 
-            with sem:
+            with condition:
+                condition.wait(timeout=10)
                 resp_cnt, approves_cnt = _get_resp_and_approves(background_tasks)
                 if approves_cnt >= required_approves:
                     return True
@@ -91,11 +92,10 @@ class MasterDomain(metaclass=MasterDomainMeta):
 
     def add_message(self, message):
         domain_log("Adding message")
-        self.messages_mtx.acquire()
-        id_msg = [self.last_message_id, message]
-        self.last_message_id += 1
-        self.messages.append(id_msg.copy())
-        self.messages_mtx.release()
+        with self.messages_mtx:
+            id_msg = [self.last_message_id, message]
+            self.last_message_id += 1
+            self.messages.append(id_msg.copy())
 
         return self.send_message_to_secondaries(id_msg)
 
