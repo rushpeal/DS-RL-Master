@@ -1,0 +1,44 @@
+version: "3"
+
+services:
+  master:
+    image: master-service
+    ports:
+      - 30000:30000
+    networks:
+      - services_network
+
+  secondary:
+    image: secondary-service
+    ports:
+      - 20000:20000
+    networks:
+      - services_network
+    command: -m master:30000
+    depends_on:
+      - master
+      
+  secondary-2:
+    image: secondary-service
+    networks:
+      - services_network
+    command: -m master:30000
+    depends_on:
+      - master
+
+  laggy-secondary:
+    image: secondary-service
+    ports:
+      - 20001:20000
+    networks:
+      - services_network
+    command: -m master:30000
+    depends_on:
+      - master
+
+networks:
+  # The presence of these objects is sufficient to define them
+  services_network: {}
+
+volumes:
+  consul-volume:
