@@ -15,8 +15,7 @@ class MasterService(BaseHTTPRequestHandler):
         domain = MasterDomain()
         response = ""
         if self.path == "/get-messages":
-            msg = domain.get_messages()
-            response = json.dumps({"messages":msg})
+            response = json.dumps(domain.get_messages())
             self._set_response(200)
         else:
             self._set_response(404)

@@ -1,6 +1,8 @@
 import asyncio
 from threading import Lock, Thread, Condition
 
+import requests
+
 from MasterService.Logging import *
 from MasterService.AddressHelper import AddressHelper
 
@@ -57,13 +59,14 @@ class MasterDomain(metaclass=MasterDomainMeta):
         self.number_of_retries = retry_cnt
         self.messages_mtx = Lock()
         self.last_message_id = 0
-        self.messages = []
+        self.messages = dict()
         self.sheduler = MessageSheduler()
 
     # Should send message, do self.number_of_retries retries on fail, 
     # Returns true if message sent, false if all retries failed
     async def send_message(self, channel, id_and_message, notify_cond):
-        await asyncio.sleep(channel)
+
+        post_response = requests.post("http://"+channel+ "/add-message", json=id_and_message)
         domain_log("Message Sent!")
         with notify_cond:
             notify_cond.notify()
@@ -93,15 +96,17 @@ class MasterDomain(metaclass=MasterDomainMeta):
     def add_message(self, message):
         domain_log("Adding message")
         with self.messages_mtx:
-            id_msg = [self.last_message_id, message]
+            id_msg = {"id": self.last_message_id, 
+                      "message": message}
+            self.messages[self.last_message_id] = message
             self.last_message_id += 1
-            self.messages.append(id_msg.copy())
 
         return self.send_message_to_secondaries(id_msg)
 
     def get_messages(self):
         domain_log("Getting messages")
-        return []
+        with self.messages_mtx:
+            return self.messages
     
     def add_client(self, client_address):
         self.addr_helper.add(client_address)
