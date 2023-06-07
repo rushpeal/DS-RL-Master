@@ -49,6 +49,3 @@ services:
 networks:
   # The presence of these objects is sufficient to define them
   services_network: {}
-
-volumes:
-  consul-volume:
