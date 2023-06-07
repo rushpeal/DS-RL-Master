@@ -9,3 +9,6 @@ class AddressHelper():
     
     def add(self, channel):
         self.channels.add(channel)
+
+    def remove(self, channel):
+        self.channels.remove(channel)

@@ -62,6 +62,26 @@ class MasterDomain(metaclass=MasterDomainMeta):
         self.messages = dict()
         self.sheduler = MessageSheduler()
 
+        self.sheduler.create_task(self.ping)
+
+
+    async def ping(self):
+        delete_list = [] 
+        domain_log("checking" + str(self.addr_helper.GetChannels()))
+        for ch in self.addr_helper.GetChannels():
+            try:
+                result = requests.get("http://"+ ch + "/ping")
+                if not result.ok:
+                    delete_list.append(ch)
+            except:
+                delete_list.append(ch)
+        for ch in delete_list:
+            domain_log("Removed secondary" + str(ch))
+            self.addr_helper.remove(ch)
+
+        await asyncio.sleep(5)
+        self.sheduler.create_task(self.ping)
+
     # Should send message, do self.number_of_retries retries on fail, 
     # Returns true if message sent, false if all retries failed
     async def send_message(self, channel, id_and_message, notify_cond):
@@ -86,7 +106,7 @@ class MasterDomain(metaclass=MasterDomainMeta):
         while resp_cnt < len(background_tasks):
             # Looks like it will check nonstop after first message, but I am lazy 
             with condition:
-                condition.wait(timeout=10)
+                condition.wait(timeout=1)
                 resp_cnt, approves_cnt = _get_resp_and_approves(background_tasks)
                 if approves_cnt >= required_approves:
                     return True
