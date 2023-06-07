@@ -1,12 +1,14 @@
 from http.server import HTTPServer
 import argparse
+import asyncio
+import tornado
 
 from MasterService.Logging import *
 import MasterService.Constants as constants
 from MasterService.AddressHelper import AddressHelper
 from MasterService.Constants import ConfigKeys
 from MasterService.MasterDomain import MasterDomain
-from MasterService.MasterService import MasterService
+from MasterService.MasterService import AddMessageHandler, GetMessageHandler, RegisterHandler
 
 class MasterApp:
     def __init__(self):
@@ -24,20 +26,27 @@ class MasterApp:
     def parse_args(self):
         args = self.arg_parser.parse_args()
         self.config[ConfigKeys.PORT] = args.port
+        if args.retry is not None:
+            self.config[ConfigKeys.RETRIES_TO_SECONDARY] = args.retry
 
     def add_args_to_parser(self):
         self.arg_parser.add_argument('-p', '--port', type=int) 
+        self.arg_parser.add_argument('-r', '--retry', type=int) 
 
     def run(self):
         addr_helper = AddressHelper()
         MasterDomain(addr_helper, self.config[ConfigKeys.RETRIES_TO_SECONDARY])
 
+        app = tornado.web.Application([
+            (r"/add-message", AddMessageHandler),
+            (r"/register", RegisterHandler),
+            (r"/get-messages", GetMessageHandler),
+        ])
+
         server_address = ('', self.config[ConfigKeys.PORT])
-        httpd = HTTPServer(server_address, MasterService)
         app_log('Starting httpd at ' + str(server_address))
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            pass
-        httpd.server_close()
+
+        app.listen(self.config[ConfigKeys.PORT])
+
+        tornado.ioloop.IOLoop.current().start()
         app_log('Stopping httpd...')
