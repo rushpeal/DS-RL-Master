@@ -92,11 +92,15 @@ class MasterDomain(metaclass=MasterDomainMeta):
             notify_cond.notify()
         return True
 
-    def send_message_to_secondaries(self, id_and_message):
+
+    def send_message_to_secondaries(self, id_and_message, write_concern):
         background_tasks = set()
         required_responces = len(self.addr_helper.GetChannels())    
-        required_approves = required_responces    
+        required_approves = write_concern - 1 # one is only master    
         condition = Condition()
+    
+        while len(self.addr_helper.GetChannels()) < required_approves:
+            time.sleep(5)
 
         for ch in self.addr_helper.GetChannels():
             task = self.sheduler.create_task(self.send_message, ch, id_and_message, condition)
@@ -113,15 +117,18 @@ class MasterDomain(metaclass=MasterDomainMeta):
 
         return False
 
-    def add_message(self, message):
+    def add_message(self, message, write_concern):
+        if len(self.addr_helper.GetChannels()) < (write_concern-1):
+            return False
+        
         domain_log("Adding message")
         with self.messages_mtx:
             id_msg = {"id": self.last_message_id, 
                       "message": message}
             self.messages[self.last_message_id] = message
             self.last_message_id += 1
-
-        return self.send_message_to_secondaries(id_msg)
+        
+        return self.send_message_to_secondaries(id_msg, write_concern)
 
     def get_messages(self):
         domain_log("Getting messages")

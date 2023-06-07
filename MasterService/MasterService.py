@@ -29,7 +29,7 @@ class MasterService(BaseHTTPRequestHandler):
         domain = MasterDomain()
 
         if self.path == "/add-message":
-            if domain.add_message(data["message"]):
+            if domain.add_message(data["message"], data["write-concern"]):
                 self._set_response(200)
             else:
                 self._set_response(500)
