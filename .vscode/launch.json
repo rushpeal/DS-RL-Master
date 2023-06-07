@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["-p", "10000"],
+            "args": ["-p", "30000"],
             "justMyCode": true
         }
     ]

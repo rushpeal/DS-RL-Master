@@ -102,3 +102,6 @@ class MasterDomain(metaclass=MasterDomainMeta):
     def get_messages(self):
         domain_log("Getting messages")
         return []
+    
+    def add_client(self, client_address):
+        self.addr_helper.add(client_address)
