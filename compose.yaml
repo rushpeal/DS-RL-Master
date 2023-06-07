@@ -32,7 +32,17 @@ services:
       - 20001:20000
     networks:
       - services_network
-    command: -m master:30000
+    command: -m master:30000 -l 10
+    depends_on:
+      - master
+
+  faulty-secondary:
+    image: secondary-service
+    ports:
+      - 20002:20000
+    networks:
+      - services_network
+    command: -m master:30000 -fail_every_2_msg true
     depends_on:
       - master
 
