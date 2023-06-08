@@ -73,9 +73,8 @@ To run image:
 
 
 
-
-
 >Add logic for messages deduplication and to guarantee the total ordering of messages.
+
 Завдяки індексації повідомлень, повідомленням з однаковим контентом присвоюються відмінні почергові індекси:
 <img width="1080" alt="image" src="https://github.com/Qlorry/DS-RL-Master/assets/62158298/2c63b6b7-9859-4c10-b567-c0a42931d3b0">
 
